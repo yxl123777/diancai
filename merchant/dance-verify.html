@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>身份验证 - 味来点餐</title>
+  <link rel="stylesheet" href="../css/common.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 50%, #4c1d95 100%);
+    }
+    .card {
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      padding: 32px 24px;
+    }
+    .card .icon { font-size: 64px; margin-bottom: 8px; }
+    .card h2 { font-size: 22px; margin-bottom: 4px; color: #333; }
+    .card .hint { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+
+    .upload-zone {
+      border: 3px dashed #c4b5fd;
+      border-radius: 20px;
+      padding: 40px 20px;
+      cursor: pointer;
+      transition: all .2s;
+      background: #faf5ff;
+      margin-bottom: 16px;
+    }
+    .upload-zone:hover {
+      border-color: #8b5cf6;
+      background: #f3e8ff;
+    }
+    .upload-zone .upload-icon { font-size: 48px; }
+    .upload-zone .upload-text { font-size: 16px; font-weight: 600; color: #6d28d9; margin-top: 8px; }
+    .upload-zone .upload-sub { font-size: 12px; color: #a78bfa; margin-top: 4px; }
+    .upload-zone input[type="file"] { display: none; }
+
+    #videoPreview {
+      width: 100%;
+      max-height: 220px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .progress-wrap {
+      display: none;
+      margin-bottom: 16px;
+    }
+    .progress-bar-bg {
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #8b5cf6, #ec4899, #f97316);
+      border-radius: 4px;
+      width: 0%;
+      transition: width .3s;
+    }
+    .progress-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    .btn-dance {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(90deg, #8b5cf6, #6d28d9);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-dance:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(109,40,217,.4); }
+    .btn-dance:disabled { background: #ccc; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .back-link { display: block; margin-top: 16px; color: rgba(255,255,255,.7); font-size: 13px; }
+    .back-link:hover { color: #fff; }
+
+    .dance-stick {
+      display: inline-block;
+      animation: disco .5s infinite alternate;
+    }
+    @keyframes disco {
+      0% { transform: rotate(-10deg) scaleX(-1); }
+      100% { transform: rotate(10deg) scaleX(1); }
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">
+    <span class="dance-stick">🕺</span>
+  </div>
+  <h2>商家身份验证</h2>
+  <p class="hint">📹 上传一段跳舞视频以证明你的身份</p>
+
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">🎬</div>
+    <div class="upload-text">点击上传跳舞视频</div>
+    <div class="upload-sub">支持 MP4 / MOV，随便拍一段就行</div>
+    <input type="file" id="fileInput" accept="video/*">
+  </div>
+
+  <video id="videoPreview" controls></video>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-text" id="progressText">正在分析舞姿…</div>
+  </div>
+
+  <button class="btn-dance" id="verifyBtn" disabled>🕺 验证进入</button>
+
+  <a class="back-link" href="../index.html">← 返回首页</a>
+</div>
+
+<script>
+(function () {
+  var fileInput = document.getElementById('fileInput');
+  var videoPreview = document.getElementById('videoPreview');
+  var uploadZone = document.getElementById('uploadZone');
+  var verifyBtn = document.getElementById('verifyBtn');
+  var progressWrap = document.getElementById('progressWrap');
+  var progressFill = document.getElementById('progressFill');
+  var progressText = document.getElementById('progressText');
+
+  // 舞蹈动作关键词，随机选一条用来"分析"
+  var danceMoves = [
+    '检测到流畅的律动感',
+    '动作幅度评分：A+',
+    '节奏感分析：优秀',
+    '舞姿优雅度：满分',
+    '摇摆频率检测：完美',
+    '已识别到舞蹈元素',
+    '正在比对专业舞者数据库',
+    '身体协调性评估：通过',
+    '街舞元素检测：已确认',
+    '广场舞潜力值：MAX'
+  ];
+
+  fileInput.addEventListener('change', function () {
+    var file = fileInput.files[0];
+    if (!file) return;
+
+    // 显示视频预览
+    var url = URL.createObjectURL(file);
+    videoPreview.src = url;
+    videoPreview.style.display = 'block';
+    uploadZone.style.display = 'none';
+    verifyBtn.disabled = false;
+  });
+
+  verifyBtn.addEventListener('click', function () {
+    // 模拟"AI 分析"进度条
+    progressWrap.style.display = 'block';
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = '⏳ 正在验证身份…';
+
+    var progress = 0;
+    var interval = setInterval(function () {
+      progress += Math.random() * 25 + 5;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+
+        // 随机选一条"分析结果"
+        var result = danceMoves[Math.floor(Math.random() * danceMoves.length)];
+        progressText.textContent = '✅ ' + result + '，验证通过！';
+
+        setTimeout(function () {
+          sessionStorage.setItem('merchant_authed', '1');
+          location.href = 'dashboard.html';
+        }, 800);
+      }
+      progressFill.style.width = progress + '%';
+      // 随机切换"分析"文字
+      if (Math.random() > .6) {
+        progressText.textContent = danceMoves[Math.floor(Math.random() * danceMoves.length)] + '…';
+      }
+    }, 400);
+  });
+})();
+</script>
+</body>
+</html>
