@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>菜单 - 味来点餐</title>
+  <link rel="stylesheet" href="../css/common.css">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .menu-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* 左侧分类 */
+    .category-side {
+      width: 88px;
+      background: #f8f9fa;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .category-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 56px;
+      font-size: 14px;
+      color: #666;
+      position: relative;
+      cursor: pointer;
+    }
+    .category-item.active {
+      background: #fff;
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .category-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 28px;
+      background: var(--primary);
+      border-radius: 0 3px 3px 0;
+    }
+
+    /* 右侧菜品 */
+    .dish-side { flex: 1; overflow-y: auto; }
+    .dish-group-title {
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding: 14px 16px 8px;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 1;
+    }
+    .dish-item {
+      display: flex;
+      padding: 14px 16px;
+      background: #fff;
+      border-bottom: 1px solid #f3f4f6;
+      gap: 12px;
+    }
+    .dish-img {
+      width: 80px;
+      height: 80px;
+      flex-shrink: 0;
+      font-size: 40px;
+    }
+    .dish-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .dish-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dish-name {
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .dish-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .dish-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+    }
+    .dish-price {
+      font-size: 18px;
+      color: var(--danger);
+      font-weight: 600;
+    }
+    .add-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-size: 20px;
+      line-height: 28px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .15s;
+    }
+    .add-btn:active {
+      background: var(--primary-dark);
+      transform: scale(0.9);
+    }
+
+    /* 底部购物车浮条 */
+    .cart-bar {
+      height: 56px;
+      background: #1f2937;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+    }
+    .cart-bar .cart-icon {
+      position: relative;
+      font-size: 28px;
+    }
+    .cart-bar .cart-badge {
+      position: absolute;
+      top: -6px;
+      right: -10px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--danger);
+      color: #fff;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cart-bar .cart-info {
+      flex: 1;
+    }
+    .cart-bar .cart-price {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .cart-bar .go-cart {
+      padding: 8px 18px;
+      border-radius: 20px;
+      background: var(--warning);
+      color: #000;
+      font-weight: 700;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<div class="nav-bar">
+  <a class="back" href="table.html">←</a>
+  <span class="title" id="pageTitle">菜单</span>
+</div>
+
+<div class="menu-body">
+  <div class="category-side" id="categorySide"></div>
+  <div class="dish-side" id="dishSide"></div>
+</div>
+
+<div class="cart-bar" id="cartBar" style="display:none;">
+  <div class="cart-icon">
+    🛒
+    <span class="cart-badge" id="cartBadge">0</span>
+  </div>
+  <div class="cart-info">
+    <span class="cart-price" id="cartPrice">¥0</span>
+  </div>
+  <button class="go-cart" onclick="location.href='cart.html?table='+getParam('table')">去结算</button>
+</div>
+
+<script src="../js/data-init.js"></script>
+<script src="../js/store.js"></script>
+<script>
+function getParam(name) {
+  return new URLSearchParams(location.search).get(name);
+}
+
+(function () {
+  const tableId = getParam('table');
+  const categories = Store.getCategories();
+  let activeCategoryId = categories[0]?.id;
+
+  function renderCategories() {
+    const side = document.getElementById('categorySide');
+    side.innerHTML = categories.map(c =>
+      `<div class="category-item ${c.id === activeCategoryId ? 'active' : ''}" data-id="${c.id}">${c.name}</div>`
+    ).join('');
+    side.querySelectorAll('.category-item').forEach(item => {
+      item.addEventListener('click', function () {
+        activeCategoryId = this.dataset.id;
+        renderCategories();
+        document.getElementById('cat-' + activeCategoryId).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }
+
+  function renderDishes() {
+    const dishSide = document.getElementById('dishSide');
+    dishSide.innerHTML = categories.map(c => {
+      const dishes = Store.getDishesByCategory(c.id);
+      return `<div id="cat-${c.id}">
+        <div class="dish-group-title">${c.name}</div>
+        ${dishes.map(d => `
+          <div class="dish-item">
+            <div class="placeholder-img dish-img" style="background:${d.bg};">${d.emoji}</div>
+            <div class="dish-info">
+              <div class="dish-name-row">
+                <span class="dish-name">${d.name}</span>
+                ${d.isFeatured ? '<span class="tag tag-featured">招牌</span>' : ''}
+              </div>
+              <div class="dish-desc">${d.desc}</div>
+              <div class="dish-bottom">
+                <span class="dish-price">¥${d.price}</span>
+                <button class="add-btn" data-dish='${JSON.stringify(d).replace(/'/g,"&#39;")}'>+</button>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    }).join('');
+
+    // 添加事件
+    dishSide.querySelectorAll('.add-btn').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const dish = JSON.parse(this.dataset.dish);
+        Store.addToCart(tableId, dish);
+        updateCartBar();
+        // 小小的弹出动画
+        this.textContent = '✓';
+        this.style.background = '#10b981';
+        setTimeout(() => {
+          this.textContent = '+';
+          this.style.background = '';
+        }, 400);
+      });
+    });
+
+    // 滚动联动
+    dishSide.addEventListener('scroll', function () {
+      const cats = dishSide.querySelectorAll('[id^="cat-"]');
+      let current = activeCategoryId;
+      cats.forEach(cat => {
+        const rect = cat.getBoundingClientRect();
+        if (rect.top <= 80) {
+          current = cat.id.replace('cat-', '');
+        }
+      });
+      if (current !== activeCategoryId) {
+        activeCategoryId = current;
+        renderCategories();
+      }
+    });
+  }
+
+  function updateCartBar() {
+    const count = Store.getCartCount(tableId);
+    const total = Store.getCartTotal(tableId);
+    const bar = document.getElementById('cartBar');
+    if (count === 0) {
+      bar.style.display = 'none';
+    } else {
+      bar.style.display = 'flex';
+      document.getElementById('cartBadge').textContent = count;
+      document.getElementById('cartPrice').textContent = '¥' + total;
+    }
+  }
+
+  renderCategories();
+  renderDishes();
+  updateCartBar();
+
+  // 监听其他标签页的 storage 变化
+  window.addEventListener('storage', updateCartBar);
+})();
+</script>
+</body>
+</html>

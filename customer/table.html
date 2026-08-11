@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>选择桌位 - 味来点餐</title>
+  <link rel="stylesheet" href="../css/common.css">
+  <style>
+    .table-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .table-card {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      border: 2px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      transition: all .15s;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .table-card:hover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      transform: scale(1.05);
+    }
+    .table-card.occupied {
+      background: #f3f4f6;
+      color: #ccc;
+      cursor: not-allowed;
+      border-style: dashed;
+    }
+    .table-card .table-emoji {
+      font-size: 32px;
+      margin-bottom: 4px;
+    }
+    .table-card.occupied .table-emoji {
+      opacity: .3;
+    }
+
+    .section-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-top: 20px;
+      margin-bottom: 4px;
+    }
+
+    .people-picker {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .people-btn {
+      width: 48px;
+      height: 48px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      transition: all .15s;
+    }
+    .people-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .people-btn.active {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .go-btn {
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+<div class="nav-bar">
+  <a class="back" href="../index.html">←</a>
+  <span class="title">选择桌位</span>
+</div>
+<div class="page">
+  <p style="color:var(--text-secondary);font-size:14px;">请选择您的桌号与就餐人数</p>
+
+  <div class="section-label">🪑 选择桌号</div>
+  <div class="table-grid" id="tableGrid"></div>
+
+  <div class="section-label">👥 就餐人数</div>
+  <div class="people-picker" id="peoplePicker"></div>
+
+  <button class="btn btn-lg btn-block go-btn" id="goBtn" disabled>开始点菜</button>
+</div>
+
+<script src="../js/data-init.js"></script>
+<script src="../js/store.js"></script>
+<script>
+(function () {
+  let selectedTable = null;
+  let peopleCount = 1;
+
+  function renderTables() {
+    const tables = Store.getTables();
+    const grid = document.getElementById('tableGrid');
+    grid.innerHTML = tables.map(t => {
+      const occ = t.status !== 'free';
+      return `<div class="table-card ${occ ? 'occupied' : ''}" data-id="${t.id}" >
+        <span class="table-emoji">${occ ? '🚫' : '🪑'}</span>
+        <span>${t.name}</span>
+        ${occ ? '<span style="font-size:11px;color:#ccc;">使用中</span>' : ''}
+      </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.table-card:not(.occupied)').forEach(card => {
+      card.addEventListener('click', function () {
+        selectedTable = this.dataset.id;
+        renderTableSelection();
+        updateGoBtn();
+      });
+    });
+  }
+
+  function renderTableSelection() {
+    document.querySelectorAll('.table-card').forEach(c => {
+      c.style.outline = c.dataset.id === selectedTable ? '3px solid var(--primary)' : '';
+      c.style.outlineOffset = c.dataset.id === selectedTable ? '2px' : '';
+    });
+  }
+
+  function renderPeople() {
+    const picker = document.getElementById('peoplePicker');
+    for (let i = 1; i <= 10; i++) {
+      const btn = document.createElement('div');
+      btn.className = 'people-btn' + (i === peopleCount ? ' active' : '');
+      btn.textContent = i;
+      btn.addEventListener('click', function () {
+        peopleCount = i;
+        renderPeople();
+        updateGoBtn();
+      });
+      picker.appendChild(btn);
+    }
+  }
+
+  function updateGoBtn() {
+    document.getElementById('goBtn').disabled = !selectedTable;
+  }
+
+  document.getElementById('goBtn').addEventListener('click', function () {
+    if (!selectedTable) return;
+    // 更新桌位状态
+    const tables = Store.getTables();
+    const t = tables.find(t => t.id === selectedTable);
+    if (t) { t.status = 'occupied'; Store.saveTables(tables); }
+    location.href = 'menu.html?table=' + selectedTable + '&people=' + peopleCount;
+  });
+
+  renderTables();
+  renderPeople();
+})();
+</script>
+</body>
+</html>

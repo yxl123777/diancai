@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>味来点餐</title>
+  <link rel="stylesheet" href="css/common.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
+    }
+    .home {
+      text-align: center;
+      padding: 32px;
+      max-width: 380px;
+      width: 100%;
+    }
+    .home .logo {
+      font-size: 64px;
+      margin-bottom: 8px;
+    }
+    .home h1 {
+      color: #fff;
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .home .subtitle {
+      color: rgba(255,255,255,.75);
+      font-size: 14px;
+      margin-bottom: 40px;
+    }
+    .home .role-btn {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      padding: 20px 24px;
+      border: none;
+      border-radius: 16px;
+      background: #fff;
+      color: var(--text);
+      font-size: 19px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 16px;
+      transition: all .2s;
+      text-decoration: none;
+    }
+    .home .role-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(0,0,0,.2);
+    }
+    .home .role-btn:active {
+      transform: translateY(0);
+    }
+    .home .role-btn .role-icon {
+      font-size: 40px;
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-light);
+      border-radius: 14px;
+      flex-shrink: 0;
+    }
+    .home .role-btn.merchant .role-icon { background: #fef3c7; }
+    .home .role-btn .role-arrow {
+      margin-left: auto;
+      color: #ccc;
+      font-size: 18px;
+    }
+    .home .footer-text {
+      color: rgba(255,255,255,.55);
+      font-size: 12px;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+<div class="home">
+  <div class="logo">🍽️</div>
+  <h1>味来点餐</h1>
+  <p class="subtitle">智慧餐饮，美味触手可及</p>
+
+  <a href="customer/table.html" class="role-btn">
+    <span class="role-icon">👤</span>
+    顾客点餐
+    <span class="role-arrow">→</span>
+  </a>
+  <a href="merchant/dashboard.html" class="role-btn merchant">
+    <span class="role-icon">👨‍🍳</span>
+    商家管理
+    <span class="role-arrow">→</span>
+  </a>
+
+  <p class="footer-text">演示版 · 数据存于浏览器本地</p>
+</div>
+
+<script src="js/data-init.js"></script>
+</body>
+</html>

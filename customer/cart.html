@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>购物车 - 味来点餐</title>
+  <link rel="stylesheet" href="../css/common.css">
+  <style>
+    .cart-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .cart-emoji { font-size: 40px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+    .cart-info { flex: 1; min-width: 0; }
+    .cart-info .name { font-size: 16px; font-weight: 500; }
+    .cart-info .price { font-size: 14px; color: var(--danger); font-weight: 600; margin-top: 2px; }
+    .qty-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .qty-ctrl button {
+      width: 32px; height: 32px; border: 1px solid var(--border);
+      background: #fff; font-size: 18px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .qty-ctrl button:first-child { border-radius: 6px 0 0 6px; }
+    .qty-ctrl button:last-child { border-radius: 0 6px 6px 0; }
+    .qty-ctrl button:active { background: #f3f4f6; }
+    .qty-ctrl .qty-num {
+      width: 40px; height: 32px; border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 600; background: #f9fafb;
+    }
+    .cart-delete { color: var(--danger); background: none; border: none; font-size: 22px; cursor: pointer; padding: 4px 8px; }
+    .summary { text-align: right; padding: 16px 0; }
+    .summary .total { font-size: 24px; color: var(--danger); font-weight: 700; }
+    .summary .count { font-size: 13px; color: var(--text-secondary); }
+  </style>
+</head>
+<body>
+<div class="nav-bar">
+  <a class="back" href="javascript:history.back()">←</a>
+  <span class="title">购物车</span>
+</div>
+<div class="page" id="cartContent">
+  <div class="empty-state"><div class="icon">🛒</div><p>购物车是空的</p></div>
+</div>
+
+<div id="summary" style="display:none;">
+  <div class="page">
+    <div class="summary">
+      <div class="count">共 <strong id="totalCount">0</strong> 件商品</div>
+      <div class="total" id="totalPrice">¥0</div>
+    </div>
+    <button class="btn btn-lg btn-block" id="submitBtn">确认下单</button>
+  </div>
+</div>
+
+<script src="../js/data-init.js"></script>
+<script src="../js/store.js"></script>
+<script>
+function getParam(name) {
+  return new URLSearchParams(location.search).get(name);
+}
+
+(function () {
+  const tableId = getParam('table');
+
+  function render() {
+    const cart = Store.getCart(tableId);
+    const content = document.getElementById('cartContent');
+    const summary = document.getElementById('summary');
+
+    if (cart.length === 0) {
+      content.innerHTML = '<div class="empty-state"><div class="icon">🛒</div><p>购物车是空的</p><br><a class="btn btn-outline" href="menu.html?table=' + tableId + '">返回菜单</a></div>';
+      summary.style.display = 'none';
+      return;
+    }
+
+    summary.style.display = 'block';
+    const total = Store.getCartTotal(tableId);
+    const count = Store.getCartCount(tableId);
+
+    content.innerHTML = cart.map(item => `
+      <div class="cart-item">
+        <div class="cart-emoji placeholder-img" style="background:#f3f4f6;">${item.emoji}</div>
+        <div class="cart-info">
+          <div class="name">${item.name}</div>
+          <div class="price">¥${item.price}</div>
+        </div>
+        <div class="qty-ctrl">
+          <button data-dish="${item.dishId}" data-action="minus">−</button>
+          <div class="qty-num">${item.qty}</div>
+          <button data-dish="${item.dishId}" data-action="plus">+</button>
+        </div>
+        <button class="cart-delete" data-dish="${item.dishId}" data-action="delete">×</button>
+      </div>
+    `).join('');
+
+    document.getElementById('totalCount').textContent = count;
+    document.getElementById('totalPrice').textContent = '¥' + total;
+
+    // 事件
+    content.querySelectorAll('button[data-action="minus"]').forEach(b => {
+      b.addEventListener('click', function () {
+        const id = this.dataset.dish;
+        const item = Store.getCart(tableId).find(i => i.dishId === Number(id));
+        if (item && item.qty > 1) {
+          Store.updateCartQty(tableId, id, item.qty - 1);
+        } else {
+          Store.removeFromCart(tableId, id);
+        }
+        render();
+      });
+    });
+    content.querySelectorAll('button[data-action="plus"]').forEach(b => {
+      b.addEventListener('click', function () {
+        const id = this.dataset.dish;
+        const item = Store.getCart(tableId).find(i => i.dishId === Number(id));
+        if (item) Store.updateCartQty(tableId, id, item.qty + 1);
+        render();
+      });
+    });
+    content.querySelectorAll('button[data-action="delete"]').forEach(b => {
+      b.addEventListener('click', function () {
+        Store.removeFromCart(tableId, this.dataset.dish);
+        render();
+      });
+    });
+  }
+
+  document.getElementById('submitBtn').addEventListener('click', function () {
+    const cart = Store.getCart(tableId);
+    if (cart.length === 0) return;
+    const order = Store.createOrder({
+      tableId: tableId,
+      tableName: tableId,
+      customerCount: Number(getParam('people') || 1),
+      items: cart.map(i => ({ dishId: i.dishId, name: i.name, price: i.price, emoji: i.emoji, qty: i.qty })),
+      total: Store.getCartTotal(tableId)
+    });
+    Store.clearCart(tableId);
+    Store.updateTableStatus(tableId, 'occupied');
+    location.href = 'order.html?order=' + order.id;
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>订单详情 - 味来点餐</title>
+  <link rel="stylesheet" href="../css/common.css">
+  <style>
+    .order-header {
+      text-align: center;
+      padding: 16px;
+    }
+    .order-header .check-mark {
+      font-size: 56px;
+      color: var(--success);
+    }
+    .order-header .order-id {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+    .order-table {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .status-new { background: #fef3c7; color: #b45309; }
+    .status-cooking { background: #dbeafe; color: #1d4ed8; }
+    .status-done { background: #d1fae5; color: #047857; }
+
+    .progress-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 20px 0;
+    }
+    .progress-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .progress-dot {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #e5e7eb; transition: background .3s;
+    }
+    .progress-dot.done { background: var(--success); }
+    .progress-dot.active { background: var(--primary); animation: pulse .8s infinite; }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,.4); }
+      50% { box-shadow: 0 0 0 8px rgba(249,115,22,0); }
+    }
+    .progress-line {
+      width: 48px; height: 2px; background: #e5e7eb;
+    }
+    .progress-line.done { background: var(--success); }
+    .progress-label {
+      font-size: 11px; color: var(--text-secondary);
+    }
+
+    .order-items { margin-top: 16px; }
+    .order-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .order-item .oi-emoji { font-size: 32px; }
+    .order-item .oi-info { flex: 1; min-width: 0; }
+    .order-item .oi-name { font-size: 15px; font-weight: 500; }
+    .order-item .oi-qty { font-size: 13px; color: var(--text-secondary); }
+    .order-item .oi-status { font-size: 12px; }
+
+    .refresh-hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+<div class="nav-bar">
+  <a class="back" href="../index.html">←</a>
+  <span class="title">订单详情</span>
+</div>
+<div class="page" id="content"></div>
+
+<script src="../js/data-init.js"></script>
+<script src="../js/store.js"></script>
+<script>
+function getParam(name) {
+  return new URLSearchParams(location.search).get(name);
+}
+
+(function () {
+  const orderId = getParam('order');
+
+  function render() {
+    const order = Store.getOrderById(orderId);
+    if (!order) {
+      document.getElementById('content').innerHTML =
+        '<div class="empty-state"><div class="icon">🔍</div><p>订单不存在</p></div>';
+      return;
+    }
+
+    const steps = [
+      { key: 'new', label: '已下单' },
+      { key: 'cooking', label: '制作中' },
+      { key: 'done', label: '已完成' }
+    ];
+    let currentStep = order.status === 'new' ? 0 : order.status === 'cooking' ? 1 : 2;
+
+    const progressHTML = steps.map((s, i) => {
+      let dotClass = '';
+      if (i < currentStep) dotClass = 'done';
+      if (i === currentStep) dotClass = 'active';
+      const lineClass = i < currentStep ? 'done' : '';
+      return `
+        <div class="progress-step">
+          <div class="progress-dot ${dotClass}"></div>
+          <span class="progress-label">${s.label}</span>
+        </div>
+        ${i < steps.length - 1 ? '<div class="progress-line ${lineClass}"></div>' : ''}
+      `;
+    }).join('');
+
+    const itemsHTML = order.items.map(item => {
+      const statusMap = { new: '⏳ 待制作', cooking: '🔥 制作中', done: '✅ 已完成' };
+      const statusClass = 'oi-status tag-' + item.status;
+      return `
+        <div class="order-item">
+          <span class="oi-emoji">${item.emoji}</span>
+          <div class="oi-info">
+            <div class="oi-name">${item.name}</div>
+            <div class="oi-qty">×${item.qty} ¥${item.price * item.qty}</div>
+          </div>
+          <span class="oi-status tag tag-${item.status}">${statusMap[item.status]}</span>
+        </div>
+      `;
+    }).join('');
+
+    const statusClass = 'status-' + order.status;
+    const statusText = { new: '🆕 待处理', cooking: '👨‍🍳 制作中', done: '✅ 已完成' }[order.status];
+
+    document.getElementById('content').innerHTML = `
+      <div class="order-header">
+        <div class="check-mark">${order.status === 'done' ? '🎉' : '📋'}</div>
+        <div class="order-table">${order.tableName} 桌</div>
+        <div class="order-id">订单号 #${String(order.id).slice(-6)}</div>
+        <div style="margin-top:8px;">
+          <span class="status-badge ${statusClass}">${statusText}</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="progress-bar">${progressHTML}</div>
+      </div>
+
+      <div class="card order-items">
+        <h3 style="font-size:16px;margin-bottom:8px;">📋 已点菜品</h3>
+        ${itemsHTML}
+        <div style="display:flex;justify-content:space-between;padding-top:14px;">
+          <span>合计</span>
+          <span style="font-size:22px;color:var(--danger);font-weight:700;">¥${order.total}</span>
+        </div>
+      </div>
+
+      <div class="refresh-hint">订单状态每 3 秒自动刷新</div>
+    `;
+  }
+
+  render();
+
+  // 每3秒轮询刷新状态
+  setInterval(render, 3000);
+})();
+</script>
+</body>
+</html>

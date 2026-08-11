@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>桌位管理 - 味来点餐</title>
+  <link rel="stylesheet" href="../css/common.css">
+  <style>
+    .table-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .table-card {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      border: 2px solid var(--border);
+      background: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      position: relative;
+    }
+    .table-card .table-emoji { font-size: 32px; margin-bottom: 4px; }
+    .table-card.free { border-color: #d1fae5; background: #f0fdf4; }
+    .table-card.occupied { border-color: #fef3c7; background: #fffbeb; }
+    .table-card.ordered { border-color: var(--danger); background: #fef2f2; }
+    .table-card .table-status {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .table-card.free .table-status { color: var(--success); }
+    .table-card.occupied .table-status { color: var(--warning); }
+    .table-card.ordered .table-status { color: var(--danger); }
+
+    .add-table-area { margin-top: 20px; display: flex; gap: 10px; }
+    .add-table-area input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+    }
+    .add-table-area input:focus { border-color: var(--primary); }
+  </style>
+</head>
+<body>
+<div class="nav-bar">
+  <a class="back" href="dashboard.html">←</a>
+  <span class="title">桌位管理</span>
+</div>
+<div class="page">
+  <div class="filter-tabs" style="margin-bottom:16px;">
+    <button class="filter-tab active" data-filter="all">全部</button>
+    <button class="filter-tab" data-filter="free">🟢 空闲</button>
+    <button class="filter-tab" data-filter="occupied">🟡 有人</button>
+  </div>
+  <div class="table-grid" id="tableGrid"></div>
+
+  <div class="card" style="margin-top:20px;">
+    <h3 style="font-size:16px;margin-bottom:8px;">➕ 添加桌位</h3>
+    <div class="add-table-area">
+      <input id="newTableName" placeholder="输入桌号，如 C1" maxlength="4">
+      <button class="btn" id="addTableBtn">添加</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/data-init.js"></script>
+<script src="../js/store.js"></script>
+<script>
+(function () {
+  let currentFilter = 'all';
+
+  document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.addEventListener('click', function () {
+      currentFilter = this.dataset.filter;
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      render();
+    });
+  });
+
+  function render() {
+    let tables = Store.getTables();
+    if (currentFilter !== 'all') {
+      tables = tables.filter(t => t.status === currentFilter);
+    }
+
+    const statusMap = {
+      free: { emoji: '🟢', text: '空闲', cls: 'free' },
+      occupied: { emoji: '🟡', text: '有人', cls: 'occupied' }
+    };
+
+    document.getElementById('tableGrid').innerHTML = tables.map(t => {
+      const s = statusMap[t.status];
+      return `
+        <div class="table-card ${s.cls}">
+          <span class="table-emoji">🪑</span>
+          <span>${t.name}</span>
+          <span class="table-status">${s.emoji} ${s.text}</span>
+          <button class="btn-danger btn-sm" style="position:absolute;top:4px;right:4px;font-size:10px;padding:2px 6px;" data-table="${t.id}" data-action="delete">×</button>
+        </div>
+      `;
+    }).join('');
+
+    document.querySelectorAll('.btn-danger[data-action="delete"]').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const id = this.dataset.table;
+        let tables = Store.getTables();
+        tables = tables.filter(t => t.id !== id);
+        Store.saveTables(tables);
+        render();
+      });
+    });
+  }
+
+  document.getElementById('addTableBtn').addEventListener('click', function () {
+    const input = document.getElementById('newTableName');
+    const name = input.value.trim();
+    if (!name) return;
+    const tables = Store.getTables();
+    if (tables.find(t => t.id === name)) {
+      alert('该桌号已存在');
+      return;
+    }
+    tables.push({ id: name, name: name, status: 'free' });
+    Store.saveTables(tables);
+    input.value = '';
+    render();
+  });
+
+  render();
+  window.addEventListener('storage', render);
+})();
+</script>
+</body>
+</html>
