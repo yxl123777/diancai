@@ -129,6 +129,7 @@
   <a class="back-link" href="../index.html">← 返回首页</a>
 </div>
 
+<script src="../js/store.js"></script>
 <script>
 (function () {
   var fileInput = document.getElementById('fileInput');
@@ -139,7 +140,6 @@
   var progressFill = document.getElementById('progressFill');
   var progressText = document.getElementById('progressText');
 
-  // 舞蹈动作关键词，随机选一条用来"分析"
   var danceMoves = [
     '检测到流畅的律动感',
     '动作幅度评分：A+',
@@ -157,7 +157,6 @@
     var file = fileInput.files[0];
     if (!file) return;
 
-    // 显示视频预览
     var url = URL.createObjectURL(file);
     videoPreview.src = url;
     videoPreview.style.display = 'block';
@@ -166,7 +165,6 @@
   });
 
   verifyBtn.addEventListener('click', function () {
-    // 模拟"AI 分析"进度条
     progressWrap.style.display = 'block';
     verifyBtn.disabled = true;
     verifyBtn.textContent = '⏳ 正在验证身份…';
@@ -178,17 +176,16 @@
         progress = 100;
         clearInterval(interval);
 
-        // 随机选一条"分析结果"
         var result = danceMoves[Math.floor(Math.random() * danceMoves.length)];
         progressText.textContent = '✅ ' + result + '，验证通过！';
 
         setTimeout(function () {
+          Store.saveDanceVideo(videoPreview.src);
           sessionStorage.setItem('merchant_authed', '1');
           location.href = 'dashboard.html';
         }, 800);
       }
       progressFill.style.width = progress + '%';
-      // 随机切换"分析"文字
       if (Math.random() > .6) {
         progressText.textContent = danceMoves[Math.floor(Math.random() * danceMoves.length)] + '…';
       }

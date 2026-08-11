@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频管理 - 味来点餐</title>
+  <link rel="stylesheet" href="../css/common.css">
+  <style>
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .video-card {
+      background: #fff;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .video-card video {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      background: #000;
+    }
+    .video-card .vc-info {
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .video-card .vc-time {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .video-card .vc-delete {
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 2px 6px;
+    }
+  </style>
+</head>
+<body>
+<div class="nav-bar">
+  <a class="back" href="dashboard.html">←</a>
+  <span class="title">💃 顾客舞姿管理</span>
+</div>
+<div class="page" id="content">
+  <div class="filter-tabs" style="margin-bottom:16px;">
+    <button class="filter-tab active" data-tab="videos">📹 视频回放</button>
+    <button class="filter-tab" data-tab="stats">📊 统计排名</button>
+  </div>
+
+  <div id="tabVideos">
+    <div class="video-grid" id="videoGrid"></div>
+    <div class="empty-state" id="emptyVideos" style="display:none;">
+      <div class="icon">🎬</div>
+      <p>还没有人上传跳舞视频</p>
+      <p style="font-size:12px;">顾客在身份验证页上传后会出现这里</p>
+    </div>
+  </div>
+
+  <div id="tabStats" style="display:none;">
+    <div class="card">
+      <div style="text-align:center;">
+        <div class="dance-stick" style="font-size:72px;display:inline-block;animation:disco .3s infinite alternate;">💃</div>
+      </div>
+      <div style="text-align:center;margin-top:12px;">
+        <h3>总计收到 <strong style="color:var(--primary);" id="statTotal">0</strong> 段舞蹈</h3>
+        <p style="font-size:13px;color:var(--text-secondary);margin-top:4px;">
+          最近一位舞者：<strong id="statLatest">—</strong>
+        </p>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:#faf5ff;border-radius:10px;text-align:center;font-size:14px;color:#6d28d9;">
+        🏆 最佳舞姿奖：<strong id="statBest">—</strong>
+      </div>
+      <p style="text-align:center;font-size:11px;color:var(--text-secondary);margin-top:12px;">
+        「舞蹈是通往管理后台的唯一密钥」
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="../js/auth.js"></script>
+<script src="../js/store.js"></script>
+<script>
+(function () {
+  var currentTab = 'videos';
+
+  document.querySelectorAll('.filter-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      currentTab = this.dataset.tab;
+      document.querySelectorAll('.filter-tab').forEach(function (t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      document.getElementById('tabVideos').style.display = currentTab === 'videos' ? '' : 'none';
+      document.getElementById('tabStats').style.display = currentTab === 'stats' ? '' : 'none';
+      if (currentTab === 'stats') renderStats();
+    });
+  });
+
+  function render() {
+    Store.getDanceVideos().then(function (videos) {
+      var grid = document.getElementById('videoGrid');
+      var empty = document.getElementById('emptyVideos');
+
+      if (videos.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = '';
+        return;
+      }
+
+      empty.style.display = 'none';
+
+      grid.innerHTML = videos.map(function (v) {
+        var url = URL.createObjectURL(v.blob);
+        var time = new Date(v.uploadedAt);
+        var timeStr = time.toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return '<div class="video-card">'
+          + '<video src="' + url + '" controls preload="metadata"></video>'
+          + '<div class="vc-info">'
+          + '<span class="vc-time">' + timeStr + '</span>'
+          + '<button class="vc-delete" data-id="' + v.id + '" title="删除">🗑</button>'
+          + '</div>'
+          + '</div>';
+      }).reverse().join('');
+
+      grid.querySelectorAll('.vc-delete').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          Store.deleteDanceVideo(Number(this.dataset.id)).then(function () { render(); });
+        });
+      });
+
+      renderStatsData(videos);
+    });
+  }
+
+  var statCache = null;
+
+  function renderStatsData(videos) {
+    statCache = videos;
+    if (currentTab === 'stats') renderStats();
+  }
+
+  function renderStats() {
+    var videos = statCache || [];
+    document.getElementById('statTotal').textContent = videos.length;
+    if (videos.length > 0) {
+      var latest = videos[videos.length - 1];
+      var t = new Date(latest.uploadedAt);
+      document.getElementById('statLatest').textContent = t.toLocaleString('zh-CN');
+      document.getElementById('statBest').textContent = '第 ' + latest.id + ' 号舞者';
+    }
+  }
+
+  render();
+
+  // 每5秒刷新
+  setInterval(render, 5000);
+})();
+</script>
+</body>
+</html>

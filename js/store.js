@@ -103,5 +103,54 @@ const Store = {
     const orders = this.getOrders();
     const o = orders.find(o => o.id === Number(orderId));
     if (o) { o.status = status; this.saveOrders(orders); }
+  },
+
+  // --- 跳舞视频（IndexedDB） ---
+  _db() {
+    return new Promise(function (resolve, reject) {
+      var req = indexedDB.open('diancai_videos', 1);
+      req.onupgradeneeded = function (e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains('videos')) {
+          db.createObjectStore('videos', { keyPath: 'id', autoIncrement: true });
+        }
+      };
+      req.onsuccess = function (e) { resolve(e.target.result); };
+      req.onerror = function () { reject(new Error('IndexedDB 不可用')); };
+    });
+  },
+
+  saveDanceVideo(blobUrl) {
+    fetch(blobUrl).then(function (r) { return r.blob(); }).then((function (blob) {
+      this._db().then(function (db) {
+        var tx = db.transaction('videos', 'readwrite');
+        tx.objectStore('videos').add({
+          blob: blob,
+          filename: 'dance_' + Date.now() + '.mp4',
+          uploadedAt: new Date().toISOString()
+        });
+      });
+    }).bind(this)).catch(function (e) {
+      console.error('保存视频失败:', e);
+    });
+  },
+
+  getDanceVideos() {
+    return this._db().then(function (db) {
+      return new Promise(function (resolve) {
+        var tx = db.transaction('videos', 'readonly');
+        var req = tx.objectStore('videos').getAll();
+        req.onsuccess = function () {
+          resolve(req.result || []);
+        };
+      });
+    });
+  },
+
+  deleteDanceVideo(id) {
+    return this._db().then(function (db) {
+      var tx = db.transaction('videos', 'readwrite');
+      tx.objectStore('videos').delete(id);
+    });
   }
 };
